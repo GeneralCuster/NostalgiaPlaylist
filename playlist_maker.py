@@ -56,7 +56,7 @@ owned_songs = mc.get_all_songs()
 users_playlists = mc.get_all_playlists(incremental=False)
 
 #Create a name for the playlist, utilizing a root name so that we can add numbers to the end appropriately in the event that a playlist with our chosen name already exists
-playlist_root_name = "Nostalgia_Playlist_" + billboard_year
+playlist_root_name = "Nostalgia Playlist " + billboard_year
 playlist_name = playlist_root_name
 
 #We're going to want to check to make sure that this name isn't already used for a playlist
@@ -67,7 +67,7 @@ for user_playlist in users_playlists:
 #Start this number at 2 since that's most likely what a human would do (playlist, playlist2, playlist3, etc)
 appendable_num = 2
 while playlist_name in users_playlists_names:
-    playlist_name = playlist_root_name + "_" + str(appendable_num)
+    playlist_name = playlist_root_name + " " + str(appendable_num)
     appendable_num = appendable_num + 1
 
 #Once that loop finishes, playlist_name will be a uniquie-to-user playlist name, and we can go ahead and create that playlist.
@@ -115,14 +115,9 @@ for song_to_add in songs_to_add:
                         artist_id = track["artistId"]
                     except:
                         print("No Artist ID for Query")
-                    try:
-                        album_id = track["album_id"]
-                    except:
-                        print("No Album ID for Query")
 
                     title = track["title"]
                     artist = track["artist"]
-                    album = track["album"]
 
                     #Add the song to Play Music library
                     mc.add_store_tracks([store_id])
@@ -131,9 +126,6 @@ for song_to_add in songs_to_add:
 
                     #Break out of the loop cause we don't need to check any of the other results
                     break
-
-
-                #song_url = mc.get_stream_url(song_id=store_id)
 
         else:
             print("No results found, moving to next search query")
@@ -144,5 +136,3 @@ for song_to_add in songs_to_add:
         mc.add_songs_to_playlist(playlist_id, library_song_id)
         song_already_in_library = 0
         library_song_id = None
-
-        #HOWEVER, we're gonna want to use the song already in our library as our song to add to the nostalgia playlist
