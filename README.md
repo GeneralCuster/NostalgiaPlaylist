@@ -9,6 +9,8 @@ Currently, it is functionally done but strings within the script must be edited 
 unless you just want the top 100 for August 31st, 2014 to download constantly ;)
 
 Plans for the future:
++ Check for "live" "concert" etc. in song titles to avoid adding shitty live versions of songs
++ Check that album artist the the actual artist to aid in only downloading songs from their original albums
++ Add option to avoid adding songs from certain genres, or to focus on certain genres
 + Implement command line arguments
-
 + GUI???
