@@ -60,6 +60,7 @@ for user_playlist in users_playlists:
 appendable_num = 2
 while playlist_name in users_playlists_names:
     playlist_name = playlist_root_name + str(appendable_num)
+    appendable_num = appendable_num + 1
 
 #Once that loop finishes, playlist_name will be a uniquie-to-user playlist name, and we can go ahead and create that playlist.
 #So create the actual playlist and keep its id so we can add songs to it easily later
