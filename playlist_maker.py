@@ -8,9 +8,9 @@ import billboard
 songs_to_add = []
 
 #GET SONGS INFO FROM BILLBOARD.COM with their API first up here
-billboard_year = "2014"
-billboard_month = "08"
-billboard_day = "31"
+billboard_year = "2013"
+billboard_month = "11"
+billboard_day = "15"
 
 chart = billboard.ChartData('hot-100', date= billboard_year + '-' + billboard_month + '-' + billboard_day, fetch=True, timeout=25)
 for song in chart:
@@ -102,9 +102,13 @@ for song_to_add in songs_to_add:
         if len(results) > 0 and len(results["song_hits"]) > 0:
             for result in results["song_hits"]:
                 track = result["track"]
+                title = track["title"]
+                artist = track["artist"]
                 length = track["durationMillis"]
+
                 #Check that the length of the specific track we're looking at is greater than 0:00 - I was burned by this already, there's some glitchy things in the Play Music store.
-                if int(length) > 0:
+                #Also check to make sure the artist name is exact, and the song title is exact
+                if int(length) > 0 and track_title == song_title and track_artist == artist_name:
 
                     #If the length indicates we're working with a real song, then go ahead and cautiously grab the information we think we need. Not all tracks have all this information.
                     try:
@@ -116,13 +120,10 @@ for song_to_add in songs_to_add:
                     except:
                         print("No Artist ID for Query")
 
-                    title = track["title"]
-                    artist = track["artist"]
-
                     #Add the song to Play Music library
                     mc.add_store_tracks([store_id])
                     mc.add_songs_to_playlist(playlist_id, store_id)
-                    print("Added song: \"" + song_title + "\" by " + artist_name + " to playlist: " + playlist_name)
+                    print("Added song: \"" + track_title + "\" by " + track_artist + " to playlist: " + playlist_name)
 
                     #Break out of the loop cause we don't need to check any of the other results
                     break
