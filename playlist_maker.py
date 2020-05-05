@@ -2,11 +2,19 @@ import os
 from gmusicapi import Musicmanager
 from gmusicapi import Mobileclient
 from getmac import get_mac_address
+import billboard
+
+#Initialize list of songs to add, as touples of artist name and song ex. (Brantley Gilbert, Bottoms Up)
+songs_to_add = []
 
 #GET SONGS INFO FROM BILLBOARD.COM with their API first up here
+billboard_year = "2014"
+billboard_month = "08"
+billboard_day = "31"
 
-
-
+chart = billboard.ChartData('hot-100', date= billboard_year + '-' + billboard_month + '-' + billboard_day, fetch=True, timeout=25)
+for song in chart:
+    songs_to_add.append((song.artist, song.title))
 
 #MUST USE OPENSSL 1.0.2s
 #IDK but using the most recent version has given me issues
@@ -48,7 +56,7 @@ owned_songs = mc.get_all_songs()
 users_playlists = mc.get_all_playlists(incremental=False)
 
 #Create a name for the playlist, utilizing a root name so that we can add numbers to the end appropriately in the event that a playlist with our chosen name already exists
-playlist_root_name = "Nostalgia_Playlist_" + "year"
+playlist_root_name = "Nostalgia_Playlist_" + billboard_year
 playlist_name = playlist_root_name
 
 #We're going to want to check to make sure that this name isn't already used for a playlist
@@ -59,7 +67,7 @@ for user_playlist in users_playlists:
 #Start this number at 2 since that's most likely what a human would do (playlist, playlist2, playlist3, etc)
 appendable_num = 2
 while playlist_name in users_playlists_names:
-    playlist_name = playlist_root_name + str(appendable_num)
+    playlist_name = playlist_root_name + "_" + str(appendable_num)
     appendable_num = appendable_num + 1
 
 #Once that loop finishes, playlist_name will be a uniquie-to-user playlist name, and we can go ahead and create that playlist.
@@ -68,9 +76,6 @@ playlist_id = mc.create_playlist(name=playlist_name, description="A playlist of 
 
 #Present some interesting stats to the user about the content on their account
 print(str(len(owned_songs)) + " songs on account.")
-
-#List of songs obtainted from billboard.com list
-songs_to_add = [("Bastille", "Pompeii"), ("Brantley Gilbert", "Bottoms Up")]
 
 #Begin looping through the list of songs from billboard.com
 for song_to_add in songs_to_add:
@@ -135,7 +140,7 @@ for song_to_add in songs_to_add:
     else:
         #Song was already in library, reset the flag to 0 and inform user we didn't add the song
         song_already_in_library = 0
-        print("Song: \"" + song_title + "\" by " + artist_name + " is already in your music library. Skipping.")
+        print("Song: \"" + song_title + "\" by " + artist_name + " is already in your music library. Adding that track to playlist.")
         mc.add_songs_to_playlist(playlist_id, library_song_id)
         song_already_in_library = 0
         library_song_id = None
