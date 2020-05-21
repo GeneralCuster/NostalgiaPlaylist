@@ -10,8 +10,9 @@ unless you just want the top 100 for August 31st, 2014 to download constantly ;)
 
 Plans for the future:
 + Check for "live", "concert", "acoustic", etc. in song titles to avoid adding versions of songs other than the studio version by the specified artist
-+ Check that album artist the the actual artist to aid in only downloading songs from their original albums
++ Check that album artist is the actual artist to aid in only downloading songs from their original albums
 + Add option to avoid adding songs from certain genres, or to focus on certain genres
 + Add option to add explicit or clean versions
 + Implement command line arguments
++ Implement first-run functionality where program will attempt to figure out necessary device ID, keys, etc without the user having to do anything.
 + GUI???
