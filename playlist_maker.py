@@ -1,8 +1,75 @@
 import os
-from gmusicapi import Musicmanager
-from gmusicapi import Mobileclient
-from getmac import get_mac_address
-import billboard
+import socket
+
+#Install ifaddr if not already installed, and import it
+try:
+    import ifaddr
+except:
+    print("ifaddr not installed, installing...")
+    try:
+        os.system("python3 -m pip install ifaddr")
+        import ifaddr
+    except:
+        print("Error installing ifaddr")
+
+#Install gmusicapi if not already installed, and import necessary modules
+try:
+    from gmusicapi import Musicmanager
+    from gmusicapi import Mobileclient
+except:
+    print("gmusicapi not installed, installing...")
+    try:
+        os.system("python3 -m pip install gmusicapi")
+        from gmusicapi import Musicmanager
+        from gmusicapi import Mobileclient
+    except:
+        print("Error installing gmusicapi")
+
+#Install getmac if not already installed, and import it
+try:
+    from getmac import get_mac_address
+except:
+    print("getmac not installed, installing...")
+    try:
+        os.system("python3 -m pip install getmac")
+        from getmac import get_mac_address
+    except:
+        print("Error installing getmac")
+
+#Install billboard.com api if not already installed, and import it
+try:
+    import billboard
+except:
+    print("billboard.com api not installed, installing...")
+    try:
+        os.system("python3 -m pip install billboard.py")
+        import billboard
+    except:
+        print("Error installing billboard")
+
+#Method to grab the currently used network interface so the user doesn't have to manually figure it out
+def get_network_interface():
+    interface = ""
+    ip_address = ""
+
+    #Get list of ip addresses from all interfaces to compare against each interface
+    ips = socket.gethostbyname_ex(socket.gethostname())[-1]
+
+    #Grab the first ip address that isn't localhost. This may need to be tweaked later for systems with multiple ips - the first that isn't localhost may not always be the correct choice
+    for ip in ips:
+        if ip != "127.0.0.1":
+            ip_address = ip
+            break
+
+    #Use ifaddr to get a list of all network adapter names, and check each of their ip addresses to find one that matches the one we found above, which means that adapter is the one we want
+    adapters = ifaddr.get_adapters()
+    for adapter in adapters:
+        for ip in adapter.ips:
+            if ip.ip == ip_address:
+                interface = adapter.nice_name
+                break
+    #Return the interface we found
+    return interface
 
 #Initialize list of songs to add, as touples of artist name and song ex. (Brantley Gilbert, Bottoms Up)
 songs_to_add = []
@@ -20,8 +87,8 @@ for song in chart:
 #IDK but using the most recent version has given me issues
 
 #Get MAC Address for en1, which happens to be the inteface my laptop is using to connect to the internet. On other machines this will be different.
-#Ideally I'll find a way to determine which network interface a machien is using to connect, and then get the MAC Address for that interface.
-wifi_mac = get_mac_address(interface="en1").upper()
+#Ideally I'll find a way to determine which network interface a machine is using to connect, and then get the MAC Address for that interface.
+wifi_mac = get_mac_address(interface=get_network_interface()).upper()
 
 #Instantiate the gmusicapi session, imitating a mobile device
 mc = Mobileclient()
