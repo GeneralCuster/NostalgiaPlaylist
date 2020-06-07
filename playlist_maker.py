@@ -1,5 +1,6 @@
 import os
 import socket
+from functools import partial
 
 #Install ifaddr if not already installed, and import it
 try:
@@ -75,7 +76,7 @@ def get_network_interface():
 songs_to_add = []
 
 #GET SONGS INFO FROM BILLBOARD.COM with their API first up here
-billboard_year = "2013"
+billboard_year = "2008"
 billboard_month = "11"
 billboard_day = "15"
 
@@ -86,21 +87,36 @@ for song in chart:
 #MUST USE OPENSSL 1.0.2s
 #IDK but using the most recent version has given me issues
 
-#Get MAC Address for en1, which happens to be the inteface my laptop is using to connect to the internet. On other machines this will be different.
-#Ideally I'll find a way to determine which network interface a machine is using to connect, and then get the MAC Address for that interface.
+#Get MAC Address for the active network interface
 wifi_mac = get_mac_address(interface=get_network_interface()).upper()
 
 #Instantiate the gmusicapi session, imitating a mobile device
 mc = Mobileclient()
 
-#BEFORE any of this code will be able to run, this code must be executed and the directions followed, and then comment it out again and re-run the program:
-#mc.perform_oauth()
-#exit(1)
+#Get filepath for home directory
+#This is where we'll save our authorization credentials to use the Google Play Music account
+credentials_filepath = os.path.join(os.path.expanduser("~"), "Nostalgia_Playlist_Credentials")
 
-#This is an id for one of MY specific devices. I had to try connecting with a bogus id first, and it then told me a list of my actual device ids I could pick from
-android_id = "184F32F408A1"
-#Complete the login process with the device id
-mc.oauth_login(device_id=android_id)
+#Check for those credentials in the home directory, to see whether we need to run mc.perform_oauth() again
+if not os.path.exists(credentials_filepath):
+    #No credentials found, perform the initial authorization
+    mc.perform_oauth(storage_filepath=credentials_filepath, open_browser=True)
+
+#Try logging in with a bogus device id first, so we can generate an exception with a list of acceptable ids
+#I'd like to be able to use mc.get_registered_devices() for this, but since we can't login yet, that will fail.
+#But somehow the exception thrown by mobileclient._validate_device_id can do magic and access the valid ids fine, soooo.... idk ¯\_(ツ)_/¯
+valid_devices = []
+try:
+    mc.oauth_login(device_id="123456789789", oauth_credentials=credentials_filepath)
+except Exception as e:
+    valid_devices = e.valid_device_ids
+
+#Complete the login process just using the first returned id, or this machine's MAC address if no id is returned.
+if len(valid_devices) > 0:
+    mc.oauth_login(device_id=valid_devices[0], oauth_credentials=credentials_filepath)
+else:
+    print("No device ids found, attempting to use this machine's MAC address...")
+    mc.oauth_login(device_id=Mobileclient.FROM_MAC_ADDRESS, oauth_credentials=credentials_filepath)
 
 #Ensure the device is is authenticated (it probably is, since we were just able to login, but can't hurt to be explicit)
 if mc.is_authenticated():
@@ -175,7 +191,7 @@ for song_to_add in songs_to_add:
 
                 #Check that the length of the specific track we're looking at is greater than 0:00 - I was burned by this already, there's some glitchy things in the Play Music store.
                 #Also check to make sure the artist name is exact, and the song title is exact
-                if int(length) > 0 and track_title == song_title and track_artist == artist_name:
+                if int(length) > 0 and title == song_title and artist == artist_name:
 
                     #If the length indicates we're working with a real song, then go ahead and cautiously grab the information we think we need. Not all tracks have all this information.
                     try:
@@ -190,7 +206,7 @@ for song_to_add in songs_to_add:
                     #Add the song to Play Music library
                     mc.add_store_tracks([store_id])
                     mc.add_songs_to_playlist(playlist_id, store_id)
-                    print("Added song: \"" + track_title + "\" by " + track_artist + " to playlist: " + playlist_name)
+                    print("Added song: \"" + title + "\" by " + artist + " to playlist: " + playlist_name)
 
                     #Break out of the loop cause we don't need to check any of the other results
                     break

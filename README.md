@@ -14,6 +14,4 @@ Plans for the future:
 + Add option to avoid adding songs from certain genres, or to focus on certain genres
 + Add option to add explicit or clean versions
 + Implement command line arguments
-- Implement functionality to determine which network interface (en0, en1, etc) the active network connection uses instead of the user having to figure it out manually - DONE, for now at least
-+ Implement first-run functionality where program will attempt to figure out necessary device ID, keys, etc without the user having to do anything.
 + GUI???
