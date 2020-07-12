@@ -1,6 +1,7 @@
 import os
 import socket
-from functools import partial
+import argparse
+from datetime import datetime
 
 #Install ifaddr if not already installed, and import it
 try:
@@ -72,15 +73,61 @@ def get_network_interface():
     #Return the interface we found
     return interface
 
+#Method for checking input of a boolean
+def str2bool(val):
+    if isinstance(val, bool):
+       return val
+    if val.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif val.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
+
+#Method to check whether a songs explicitType matches what the user is looking for. Returns true if we can safely add this song to library based on users input for --explicit
+def explicit_agree(explicitType, explicitArg):
+    #Song is explicit AND user has specified they want explicit songs
+    if explicitType != 3 and explicitArg == True:
+        return True
+    #Song is clean but user has specified they want clean songs
+    elif explicitType == 3 and explicitArg == False:
+        return True
+    #Song is explicit and user wants clean, or song is clean and user wants explicit
+    else:
+        return False
+
+
+#Command line arguments for year, month and day for which to download the hot 100 songs
+parser = argparse.ArgumentParser(description='Input year, month and day to download top 100 songs.')
+parser.add_argument('--year', required=True, help='Year for which to get top 100 songs')
+parser.add_argument('--month', required=True, help='Month for which to get top 100 songs')
+parser.add_argument('--day', required=True, help='Day for which to get top 100 songs')
+parser.add_argument("--explicit", type=str2bool, nargs='?', const=True, default=False, help="If true, download explicit version of songs.")
+parser.add_argument("--nolive", type=str2bool, nargs='?', const=True, default=False, help="If true, NostalgiaPlaylist generator will try its best to avoid adding live or acoustic versions of songs")
+args = parser.parse_args()
+
+#Ensure all the arguements entered for the date are integers and are legitimate dates
+try:
+    #Get current date and create date object from user input
+    current_date = datetime.date(datetime.now())
+    billboard_date = datetime.date(datetime(int(args.year), int(args.month), int(args.day)))
+except:
+    print("One or more arguements entered were not acceptable. Please enter only integers for the year, month and day for which you'd like to download the top 100 songs and ensure the date exists.")
+    exit(1)
+
+#Ensure that the date given to us by the user is not in the future
+if billboard_date > current_date:
+    print("Billboard date cannot be in the future.")
+    exit(1)
+
+#Let the user know what date we've got from them and that we're moving on to getting the songs for that date
+print("Getting playlist for most popular songs on " + str(billboard_date.month) + "-" + str(billboard_date.day) + "-" + str(billboard_date.year))
+
 #Initialize list of songs to add, as touples of artist name and song ex. (Brantley Gilbert, Bottoms Up)
 songs_to_add = []
 
-#GET SONGS INFO FROM BILLBOARD.COM with their API first up here
-billboard_year = "2008"
-billboard_month = "11"
-billboard_day = "15"
-
-chart = billboard.ChartData('hot-100', date= billboard_year + '-' + billboard_month + '-' + billboard_day, fetch=True, timeout=25)
+#Get the hot 100 songs for the date the user entered and add them to our songs_to_add list
+chart = billboard.ChartData('hot-100', date= f'{billboard_date.year:04}' + '-' + f'{billboard_date.month:02}' + '-' + f'{billboard_date.day:02}', fetch=True, timeout=25)
 for song in chart:
     songs_to_add.append((song.artist, song.title))
 
@@ -139,7 +186,7 @@ owned_songs = mc.get_all_songs()
 users_playlists = mc.get_all_playlists(incremental=False)
 
 #Create a name for the playlist, utilizing a root name so that we can add numbers to the end appropriately in the event that a playlist with our chosen name already exists
-playlist_root_name = "Nostalgia Playlist " + billboard_year
+playlist_root_name = "Nostalgia Playlist " + str(billboard_date.year)
 playlist_name = playlist_root_name
 
 #We're going to want to check to make sure that this name isn't already used for a playlist
@@ -171,14 +218,18 @@ for song_to_add in songs_to_add:
     library_song_id = None
 
     #Check owned_songs to see if a song with that title by that artist is already in our account so we don't add duplicates of songs
+    #If we do have this song already, set the song_already_in_library flag to 1 so we know later on
     for owned_song in owned_songs:
-        if owned_song["title"] == song_title and owned_song["artist"] == artist_name:
+        if owned_song["title"] == song_title and owned_song["artist"] == artist_name and owned_song["albumArtist"] == artist_name and explicit_agree(owned_song["explicitType"], args.explicit):
             #The song is already in our library, skip to the next song in songs_to_add
             song_already_in_library = 1
             library_song_id = owned_song["storeId"]
             break
 
+    #Song isn't already in our library
     if song_already_in_library == 0:
+
+        #Perform the actual search of the play music store
         results = mc.search(artist_name + " " + song_title)
 
         #Traverse the results, but only if the list of songs has things in it
@@ -187,11 +238,19 @@ for song_to_add in songs_to_add:
                 track = result["track"]
                 title = track["title"]
                 artist = track["artist"]
+                album_artist = track["albumArtist"]
                 length = track["durationMillis"]
+
+                #I'm assuming this tells us whether the track is the explicit version, but it apparently has values 1, 2, or 3 and for the life of me I can't find documentation on which is which
+                #Through testing, it appears af 1 means the song is marked explicity, 2 has no marking? and 3 may mean its specifically a "clean" version.
+                try:
+                    explicit = track["explicitType"]
+                except:
+                    print("Unable to determine whether this track is the explicit version")
 
                 #Check that the length of the specific track we're looking at is greater than 0:00 - I was burned by this already, there's some glitchy things in the Play Music store.
                 #Also check to make sure the artist name is exact, and the song title is exact
-                if int(length) > 0 and title == song_title and artist == artist_name:
+                if int(length) > 0 and title == song_title and artist == artist_name and album_artist == artist_name and explicit_agree(explicit, args.explicit):
 
                     #If the length indicates we're working with a real song, then go ahead and cautiously grab the information we think we need. Not all tracks have all this information.
                     try:
@@ -203,13 +262,18 @@ for song_to_add in songs_to_add:
                     except:
                         print("No Artist ID for Query")
 
-                    #Add the song to Play Music library
-                    mc.add_store_tracks([store_id])
-                    mc.add_songs_to_playlist(playlist_id, store_id)
-                    print("Added song: \"" + title + "\" by " + artist + " to playlist: " + playlist_name)
+                    try:
+                        #Add the song to Play Music library
+                        mc.add_store_tracks([store_id])
+                        mc.add_songs_to_playlist(playlist_id, store_id)
+                        print("Added song: \"" + title + "\" by " + artist + " to playlist: " + playlist_name)
+                        print("Song artist: " + artist + ", album_artist: " + album_artist)
+                        #Break out of the loop cause we don't need to check any of the other results
+                        break
 
-                    #Break out of the loop cause we don't need to check any of the other results
-                    break
+                    except:
+                        print("Unable to add song: \"" + title + "\" by " + artist + " to playlist: " + playlist_name)
+                        #Don't break out of the loop if we were unable to add this song, since then we can keep going through the rest of the songs in the list in case we find one we CAN add
 
         else:
             print("No results found, moving to next search query")
