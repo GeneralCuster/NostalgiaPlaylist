@@ -1,4 +1,7 @@
 # NostalgiaPlaylist
+
+###This version is deprecated. Google is phasing out Play Music in favor of Youtube Music. Please find my new, updated Youtube Music version.
+
 Google Play Music Nostalgia Playlist Maker
 
 This is a program which uses a 3rd party Google Play Music API (gmusicapi) and another 3rd party api
